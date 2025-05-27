@@ -3,6 +3,7 @@ using System.IO;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using static System.Net.Mime.MediaTypeNames;
 namespace Examen;
 
 
@@ -13,8 +14,11 @@ public class FileHelper
     private void SaveStats(string fileName)
     {
         string statDir = "Statistics";
+        string date = DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss");
+        string newFileName = $"{fileName}_{date}.txt";
+
         Directory.CreateDirectory(statDir);
-        string path = Path.Combine(statDir, fileName); 
+        string path = Path.Combine(statDir, newFileName); 
         using StreamWriter sw = new(path);
         foreach (var st in statistics)
         {
@@ -43,7 +47,7 @@ public class FileHelper
 
             processed++;
             Console.WriteLine($" {processed * 100 / total}% - {file}");
-            await Task.Delay(1000);
+            await Task.Delay(100);
         }
         Console.WriteLine($"\n Total matches found:");
         foreach (var st in statistics)
@@ -51,7 +55,7 @@ public class FileHelper
             Console.WriteLine($"{st.Key} => {st.Value}");
         }
 
-        SaveStats("SearchStats.txt");
+        SaveStats("SearchStats");
     }
 
     public async Task CopyFilesWithReplacementAsync(string folderPath, string word, string replaceWith, CancellationToken token)
@@ -80,40 +84,37 @@ public class FileHelper
 
             processed++;
             Console.WriteLine($" {processed * 100 / total}% - {file}");
-            await Task.Delay(1000);
+            await Task.Delay(100);
         }
         Console.WriteLine("\n Copy end.");
-        SaveStats("CopyStats.txt");
+        SaveStats("CopyStats");
     }
-
     public async Task FindClassesAndInterfacesAsync(string folderPath, CancellationToken token)
     {
         string[] files = Directory.GetFiles(folderPath, "*.cs", SearchOption.AllDirectories);
         int total = files.Length, processed = 0;
-        Console.Clear();
+
         foreach (var file in files)
         {
             if (token.IsCancellationRequested) return;
 
             string content = await File.ReadAllTextAsync(file);
-            int count = Regex.Matches(content, "class").Count;
-            count += Regex.Matches(content, "interface").Count;
+            int count = Regex.Matches(content, @"(class|interface)").Count;
             if (count > 0)
                 statistics[file] = count;
 
             processed++;
             Console.WriteLine($" {processed * 100 / total}% - {file}");
-            await Task.Delay(1000);
+            await Task.Delay(100);
         }
-        
-        Console.WriteLine("\n search end.");
-        Console.WriteLine($"\n Total matches found:");
+          
+        Console.WriteLine("\n Total found:");
         foreach (var st in statistics)
         {
             Console.WriteLine($"{st.Key} => {st.Value}");
         }
-        SaveStats("CsStats.txt");
-
+        Console.WriteLine("\n Search end.");
+        SaveStats("CsStats");
     }
 
 
@@ -146,11 +147,6 @@ internal class Program
     {
         var helper = new FileHelper();
 
-        Console.Write(" Enter file path: ");
-        string path = Console.ReadLine();
-
-        
-
         while (true)
         {
             Console.WriteLine("\n Choose action:");
@@ -164,6 +160,9 @@ internal class Program
             switch (choice)
             {
                 case "1":
+                    Console.Write(" Enter file path: ");
+                    string path = Console.ReadLine();
+
                     Console.Write("Enter word: ");
                     string word = Console.ReadLine();
 
@@ -174,6 +173,9 @@ internal class Program
                     break;
 
                 case "2":
+                    Console.Write(" Enter file path: ");
+                    string path1 = Console.ReadLine();
+
                     Console.Write("Enter word to replace: ");
                     string oldWord = Console.ReadLine();
                     Console.Write("Enter new word: ");
@@ -181,13 +183,16 @@ internal class Program
 
                     var cts1 = new CancellationTokenSource();
                     ListenForCancel(cts1);
-                    await helper.CopyFilesWithReplacementAsync(path, oldWord, newWord, cts1.Token);
+                    await helper.CopyFilesWithReplacementAsync(path1, oldWord, newWord, cts1.Token);
                     break;
 
                 case "3":
+                    Console.Write(" Enter file path: ");
+                    string path2 = Console.ReadLine();
+
                     var cts2 = new CancellationTokenSource();
                     ListenForCancel(cts2);
-                    await helper.FindClassesAndInterfacesAsync(path, cts2.Token);
+                    await helper.FindClassesAndInterfacesAsync(path2, cts2.Token);
                     break;
 
                 case "0":
